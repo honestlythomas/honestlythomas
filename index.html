@@ -15,23 +15,134 @@
       background: #000;
     }
 
-    iframe {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
+    body {
+      background: #000 url("/media/images/pngs/20221020_094223_4_1_1.png") center / cover no-repeat;
+    }
+
+    #top-nav-frame {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      width: 100%;
+      height: 56px;
       border: 0;
-      background: #000;
+      background: transparent;
+    }
+
+    #content-area {
+      position: fixed;
+      inset: 56px 0 0;
+      overflow: hidden;
+    }
+
+    #bio-cycle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      padding: clamp(8px, 4vmin, 64px);
+      border: 0;
+      background: transparent;
+      color: #0f0;
+      font: bold clamp(18px, 2.2vw, 30px)/1.65 "Courier New", Courier, monospace;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    #bio-cycle:focus-visible {
+      outline: 3px solid #0f0;
+      outline-offset: -6px;
+    }
+
+    #bio-text {
+      display: block;
+      width: 100%;
+      max-width: 900px;
+      min-width: 0;
+      flex-shrink: 0;
+      overflow-wrap: anywhere;
+    }
+
+    #bio-lines {
+      background: rgba(0, 0, 0, 0.5);
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
     }
   </style>
 </head>
 <body>
   <iframe
-    src="https://theinternetisdead.org/dead/stuff/stuff-for-index/thumbnail-grid/index.html"
-    title="Honestly Thomas thumbnail grid"
-    loading="eager"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowfullscreen
+    id="top-nav-frame"
+    src="/pages/top-nav.html"
+    title="Top navigation"
+    allowtransparency="true"
+    scrolling="no"
   ></iframe>
+  <main id="content-area" aria-label="About Thomas Harrison">
+    <button id="bio-cycle" type="button" title="Click to read the next paragraph">
+      <span id="bio-text" aria-live="polite"><span id="bio-lines">Thomas Harrison is a 29-year-old neurodivergent Canadian interdisciplinary artist, writer, YouTuber, rapper, web host, creative technologist, and critical systems thinker based in Muskoka, Ontario. His independent practice spans visual design, music, video, websites, and experimental online projects. Under the rap alias Tektite, he explores transformation, memory, technology, internet culture, and personal mythology.</span></span>
+    </button>
+  </main>
+  <script>
+    const bioCycle = document.getElementById("bio-cycle");
+    const bioText = document.getElementById("bio-text");
+    const bioLines = document.getElementById("bio-lines");
+    const paragraphs = [
+      bioText.textContent,
+      "He brings lived experience, creative perspective, and practical technical problem-solving to people-centered discussion and collaborative work. His strengths include storytelling, visual communication, and big-picture, out-of-the-box thinking. He seeks mentorship and apprenticeship opportunities where he can learn alongside others, develop a sustainable working practice, and contribute creative solutions."
+    ];
+    let paragraphIndex = 0;
+    let fading = false;
+
+    function fitBioText() {
+      bioCycle.style.fontSize = "";
+      const styles = getComputedStyle(bioCycle);
+      const availableHeight = Math.max(1, bioCycle.clientHeight
+        - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom));
+      let low = 1;
+      let high = parseFloat(styles.fontSize);
+
+      for (let step = 0; step < 12; step++) {
+        const size = (low + high) / 2;
+        bioCycle.style.fontSize = size + "px";
+        if (bioText.getBoundingClientRect().height <= availableHeight
+          && bioText.scrollWidth <= bioText.clientWidth) {
+          low = size;
+        } else {
+          high = size;
+        }
+      }
+
+      bioCycle.style.fontSize = low + "px";
+    }
+
+    new ResizeObserver(fitBioText).observe(bioCycle);
+    document.fonts.ready.then(fitBioText);
+    fitBioText();
+
+    bioCycle.addEventListener("click", async () => {
+      if (fading) return;
+      fading = true;
+      const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250;
+      const fadeOut = bioText.animate([{ opacity: 1 }, { opacity: 0 }], { duration, fill: "forwards" });
+      try {
+        await fadeOut.finished;
+        paragraphIndex = (paragraphIndex + 1) % paragraphs.length;
+        bioLines.textContent = paragraphs[paragraphIndex];
+        fitBioText();
+        const fadeIn = bioText.animate([{ opacity: 0 }, { opacity: 1 }], { duration });
+        fadeOut.cancel();
+        await fadeIn.finished;
+      } finally {
+        fadeOut.cancel();
+        fading = false;
+      }
+    });
+  </script>
 </body>
 </html>
